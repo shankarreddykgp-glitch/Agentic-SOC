@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>AEGIS-SOC // Secure Clearance Gateway</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            hudbg: '#040711',
+            hudcard: '#0a1020',
+            hudpanel: '#101a30',
+            hudborder: '#1e3a5f',
+            hudcyan: '#00e5ff',
+            hudred: '#ff2a5f',
+            hudamber: '#ffb700',
+            hudgreen: '#00ff88',
+            hudpurple: '#b55fe6'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            orbitron: ['Orbitron', 'sans-serif'],
+            digital: ['Share Tech Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@600;700;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    body {
+      background-color: #040711;
+      color: #e2e8f0;
+      font-family: 'JetBrains Mono', monospace;
+      background-image: 
+        radial-gradient(circle at 50% 30%, rgba(0, 229, 255, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 80% 80%, rgba(181, 95, 230, 0.08) 0%, transparent 50%),
+        linear-gradient(to right, rgba(30, 58, 95, 0.2) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(30, 58, 95, 0.2) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+      min-height: 100vh;
+    }
+
+    .hud-box {
+      background: rgba(10, 16, 32, 0.92);
+      border: 1px solid #1e3a5f;
+      box-shadow: inset 0 0 25px rgba(0, 229, 255, 0.08), 0 10px 40px rgba(0, 0, 0, 0.85);
+      position: relative;
+    }
+
+    .hud-box::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; width: 12px; height: 12px;
+      border-top: 2px solid #00e5ff;
+      border-left: 2px solid #00e5ff;
+    }
+
+    .hud-box::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; right: -1px; width: 12px; height: 12px;
+      border-bottom: 2px solid #00e5ff;
+      border-right: 2px solid #00e5ff;
+    }
+
+    .glow-cyan { box-shadow: 0 0 30px rgba(0, 229, 255, 0.45); border-color: #00e5ff !important; }
+    .glow-green { box-shadow: 0 0 30px rgba(0, 255, 136, 0.45); border-color: #00ff88 !important; }
+    .glow-red { box-shadow: 0 0 30px rgba(255, 42, 95, 0.55); border-color: #ff2a5f !important; }
+
+    .circuit-line {
+      stroke: #00e5ff;
+      stroke-dasharray: 8, 4;
+      animation: circuitFlow 3s linear infinite;
+    }
+
+    @keyframes circuitFlow {
+      0% { stroke-dashoffset: 24; }
+      100% { stroke-dashoffset: 0; }
+    }
+
+    @keyframes scanLine {
+      0% { top: 0%; opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { top: 100%; opacity: 0.2; }
+    }
+
+    .scanner-beam {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #00e5ff, #00ff88, #00e5ff, transparent);
+      box-shadow: 0 0 15px #00e5ff;
+      animation: scanLine 2.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes pulseRing {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .pulse-ring {
+      animation: pulseRing 3s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body class="flex flex-col items-center justify-center p-4 relative overflow-x-hidden select-none">
+
+  <!-- Background SVG Circuit Streams -->
+  <svg class="absolute inset-0 w-full h-full pointer-events-none opacity-25" xmlns="http://www.w3.org/2000/svg">
+    <path class="circuit-line" d="M 0 150 H 300 L 350 200 H 800 L 850 150 H 1920" fill="none" stroke-width="1.5" />
+    <path class="circuit-line" d="M 0 700 H 500 L 550 650 H 1200 L 1250 700 H 1920" fill="none" stroke-width="1.5" />
+  </svg>
+
+  <!-- Top Security Classification Bar -->
+  <div class="fixed top-0 left-0 w-full bg-hudbg/90 border-b border-hudborder px-6 py-2 flex items-center justify-between text-xs font-digital z-20">
+    <div class="flex items-center space-x-3 text-hudcyan">
+      <span class="inline-block w-2 h-2 rounded-full bg-hudgreen animate-ping"></span>
+      <span class="font-bold tracking-widest font-orbitron">AEGIS-SOC // SECURE DEFENSE GATEWAY</span>
+      <span class="text-gray-500">|</span>
+      <span class="text-gray-400">DEFCON 1 AUTONOMOUS OPERATIONAL STATUS</span>
+    </div>
+    <div class="flex items-center space-x-4">
+      <span class="text-hudamber font-bold"><i class="fa-solid fa-lock mr-1.5"></i>RESTRICTED MILITARY-GRADE ACCESS</span>
+      <span id="gateway-clock" class="text-hudcyan font-bold tracking-wider">--:--:-- | 2026/08/25</span>
+    </div>
+  </div>
+
+  <!-- Main Login Card Container -->
+  <div class="w-full max-w-md my-12 z-10">
+
+    <div class="hud-box p-8 rounded-lg space-y-6 relative overflow-hidden backdrop-blur-md glow-cyan">
+      
+      <!-- Scanner Beam Effect -->
+      <div class="scanner-beam"></div>
+
+      <!-- Top Header Emblem -->
+      <div class="flex flex-col items-center text-center space-y-3">
+        <div class="relative w-20 h-20 rounded-full border-2 border-hudcyan/50 bg-hudpanel flex items-center justify-center pulse-ring shadow-lg">
+          <div class="absolute inset-0 rounded-full border border-hudgreen/40"></div>
+          <i class="fa-solid fa-shield-halved text-3xl text-hudcyan"></i>
+        </div>
+
+        <div>
+          <h1 class="text-2xl font-black font-orbitron tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-hudcyan via-white to-hudpurple">
+            AEGIS-SOC
+          </h1>
+          <div class="text-[10px] text-hudcyan font-digital tracking-widest uppercase mt-0.5">
+            Autonomous Cyber Defense Operations Center
+          </div>
+          <div class="inline-block text-[9px] bg-cyan-950/80 text-hudgreen px-2.5 py-0.5 rounded border border-hudgreen/40 font-digital mt-1">
+            BIOMETRIC CLEARANCE LEVEL 4 REQUIRED
+          </div>
+        </div>
+      </div>
+
+      <!-- Authorized Operator Credentials Directory Reference -->
+      <div class="bg-hudpanel/80 border border-hudborder/90 p-3 rounded space-y-2 font-digital text-xs">
+        <div class="text-[10px] text-gray-300 font-bold uppercase flex items-center justify-between border-b border-hudborder/60 pb-1.5">
+          <span class="flex items-center text-hudcyan">
+            <i class="fa-solid fa-address-book mr-1.5 text-hudamber"></i>
+            AUTHORIZED OPERATOR DIRECTORY
+          </span>
+          <span class="text-[9px] text-gray-400 font-mono">ENTER MANUALLY BELOW</span>
+        </div>
+        
+        <div class="space-y-2 text-[11px]">
+          <!-- Operator 1 -->
+          <div class="bg-hudbg/90 p-2 rounded border border-hudborder/60 flex justify-between items-center">
+            <div>
+              <div class="text-white font-bold flex items-center">
+                <i class="fa-solid fa-user-shield text-hudcyan mr-1.5 text-[10px]"></i>
+                Commander Sarah Connor
+                <span class="ml-2 text-[8px] bg-cyan-950 text-hudcyan px-1.5 py-0.5 rounded border border-hudcyan/30">LEVEL 4</span>
+              </div>
+              <div class="text-[10px] text-gray-300 font-mono mt-0.5">
+                UPN: <span class="text-cyan-300 font-semibold select-all">commander.sarah@aegis-soc.org</span>
+              </div>
+              <div class="text-[10px] text-gray-400 font-mono">
+                Key: <span class="text-amber-300 font-semibold select-all">CyberAegis#2026!</span>
+              </div>
+            </div>
+            <button type="button" onclick="fillCredentials('commander.sarah@aegis-soc.org', 'CyberAegis#2026!', '884920')" class="text-[9px] bg-hudpanel hover:bg-cyan-950 text-hudcyan border border-hudcyan/40 px-2 py-1 rounded transition font-orbitron">
+              AUTO-FILL
+            </button>
+          </div>
+
+          <!-- Operator 2 -->
+          <div class="bg-hudbg/90 p-2 rounded border border-hudborder/60 flex justify-between items-center">
+            <div>
+              <div class="text-white font-bold flex items-center">
+                <i class="fa-solid fa-user-astronaut text-hudpurple mr-1.5 text-[10px]"></i>
+                Senior Analyst Alex Hunter
+                <span class="ml-2 text-[8px] bg-purple-950 text-hudpurple px-1.5 py-0.5 rounded border border-hudpurple/30">LEVEL 3</span>
+              </div>
+              <div class="text-[10px] text-gray-300 font-mono mt-0.5">
+                UPN: <span class="text-purple-300 font-semibold select-all">analyst.alex@aegis-soc.org</span>
+              </div>
+              <div class="text-[10px] text-gray-400 font-mono">
+                Key: <span class="text-amber-300 font-semibold select-all">AegisAnalyst#99!</span>
+              </div>
+            </div>
+            <button type="button" onclick="fillCredentials('analyst.alex@aegis-soc.org', 'AegisAnalyst#99!', '450219')" class="text-[9px] bg-hudpanel hover:bg-purple-950 text-hudpurple border border-hudpurple/40 px-2 py-1 rounded transition font-orbitron">
+              AUTO-FILL
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Authentication Form (Starts Completely Blank For Manual Entry) -->
+      <form id="clearance-form" onsubmit="handleLoginSubmit(event)" class="space-y-4 font-digital">
+
+        <!-- Operator Email / UPN -->
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1">
+            <i class="fa-solid fa-id-badge text-hudcyan mr-1"></i> Operator Identity / UPN:
+          </label>
+          <div class="relative">
+            <input type="email" id="operator-username" required placeholder="Type UPN (e.g. commander.sarah@aegis-soc.org)" value="" autocomplete="username" class="w-full bg-hudbg border border-hudborder px-3.5 py-2.5 text-xs text-white rounded focus:outline-none focus:border-hudcyan focus:ring-1 focus:ring-hudcyan font-mono transition">
+            <span class="absolute right-3 top-2.5 text-gray-500 text-xs"><i class="fa-solid fa-fingerprint"></i></span>
+          </div>
+        </div>
+
+        <!-- Clearance Passphrase -->
+        <div>
+          <label class="block text-xs font-bold text-gray-300 mb-1">
+            <i class="fa-solid fa-key text-hudcyan mr-1"></i> Clearance Passphrase:
+          </label>
+          <div class="relative">
+            <input type="password" id="operator-password" required placeholder="Type passphrase (e.g. CyberAegis#2026!)" value="" autocomplete="current-password" class="w-full bg-hudbg border border-hudborder px-3.5 py-2.5 text-xs text-white rounded focus:outline-none focus:border-hudcyan focus:ring-1 focus:ring-hudcyan font-mono transition">
+            <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-2.5 text-gray-400 hover:text-white text-xs">
+              <i class="fa-solid fa-eye" id="pwd-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- MFA Hardware Token -->
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="text-xs font-bold text-gray-300">
+              <i class="fa-solid fa-shield text-hudcyan mr-1"></i> FIDO2 / MFA Security Token:
+            </label>
+            <span class="text-[9px] text-hudgreen font-digital">OPTIONAL / SYNCED</span>
+          </div>
+          <input type="text" id="operator-mfa" placeholder="6-digit Token (e.g. 884920)" value="" maxlength="6" class="w-full bg-hudbg border border-hudborder px-3.5 py-2.5 text-xs text-hudgreen tracking-widest font-mono rounded focus:outline-none focus:border-hudcyan">
+        </div>
+
+        <!-- Status Notification Display Banner -->
+        <div id="login-status-box" class="hidden p-3 rounded border font-digital text-xs"></div>
+
+        <!-- Authorize Clearance Button -->
+        <button type="submit" id="auth-btn" class="w-full bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-orbitron font-bold text-xs py-3.5 rounded shadow-lg transition transform active:scale-95 glow-cyan flex items-center justify-center space-x-2 cursor-pointer">
+          <i class="fa-solid fa-unlock-keyhole mr-1" id="auth-btn-icon"></i>
+          <span id="auth-btn-text">AUTHORIZE BIOMETRIC CLEARANCE</span>
+        </button>
+
+      </form>
+
+      <!-- Bottom Security Footnote -->
+      <div class="text-center text-[9px] font-digital text-gray-500 border-t border-hudborder pt-3">
+        ENCRYPTED VIA SHA-256 / TLS 1.3 PROTOCOL // IMMUTABLE AUDIT LOGGING ACTIVE
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- JavaScript Login Controller -->
+  <script>
+    // Live Sci-Fi Clock
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const dateStr = now.toISOString().split('T')[0].replace(/-/g, '/');
+      document.getElementById("gateway-clock").innerText = `${timeStr} | ${dateStr}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById("operator-password");
+      const icon = document.getElementById("pwd-eye-icon");
+      if (pwdInput.type === "password") {
+        pwdInput.type = "text";
+        icon.className = "fa-solid fa-eye-slash";
+      } else {
+        pwdInput.type = "password";
+        icon.className = "fa-solid fa-eye";
+      }
+    }
+
+    // Quick fill credentials
+    function fillCredentials(user, pwd, mfa) {
+      document.getElementById("operator-username").value = user;
+      document.getElementById("operator-password").value = pwd;
+      document.getElementById("operator-mfa").value = mfa;
+
+      const statusBox = document.getElementById("login-status-box");
+      statusBox.className = "p-2.5 rounded border border-hudcyan/50 bg-cyan-950/60 text-hudcyan text-xs font-digital block";
+      statusBox.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5"></i> Credentials selected: <b>${user}</b>. Click <b>AUTHORIZE BIOMETRIC CLEARANCE</b> to proceed.`;
+    }
+
+    // Handle Form Submit
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById("operator-username").value.trim();
+      const password = document.getElementById("operator-password").value.trim();
+      const mfa = document.getElementById("operator-mfa").value.trim();
+
+      const statusBox = document.getElementById("login-status-box");
+      const btn = document.getElementById("auth-btn");
+      const btnText = document.getElementById("auth-btn-text");
+      const btnIcon = document.getElementById("auth-btn-icon");
+
+      // Set Scanning State
+      btn.disabled = true;
+      btn.className = "w-full bg-cyan-950 border border-hudcyan text-hudcyan font-orbitron font-bold text-xs py-3.5 rounded shadow-lg flex items-center justify-center space-x-2 cursor-wait";
+      btnText.innerText = "SCANNING BIOMETRIC SIGNATURE...";
+      btnIcon.className = "fa-solid fa-spinner fa-spin mr-1";
+
+      statusBox.className = "p-3 rounded border border-hudcyan/60 bg-cyan-950/70 text-hudcyan text-xs font-digital block animate-pulse";
+      statusBox.innerHTML = `<i class="fa-solid fa-radar mr-1.5"></i> Correlating operator clearance and verifying FIDO2 credentials against central IdP...`;
+
+      try {
+        const response = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: username,
+            password: password,
+            mfa_code: mfa
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'SUCCESS') {
+          // Store operator identity in session
+          sessionStorage.setItem("aegis_auth_token", data.token);
+          sessionStorage.setItem("aegis_operator_name", data.operator.name);
+          sessionStorage.setItem("aegis_operator_role", data.operator.role);
+          sessionStorage.setItem("aegis_operator_clearance", data.operator.clearance);
+
+          btn.className = "w-full bg-emerald-700 text-white font-orbitron font-bold text-xs py-3.5 rounded shadow-lg flex items-center justify-center space-x-2 glow-green";
+          btnText.innerText = "BIOMETRIC IDENT CONFIRMED // ACCESS GRANTED";
+          btnIcon.className = "fa-solid fa-circle-check mr-1";
+
+          statusBox.className = "p-3 rounded border border-hudgreen bg-emerald-950/80 text-hudgreen text-xs font-digital block";
+          statusBox.innerHTML = `
+            <div class="font-bold font-orbitron text-sm"><i class="fa-solid fa-shield-halved mr-1"></i> CLEARANCE GRANTED</div>
+            <div>Welcome, <b>${data.operator.name}</b> (${data.operator.clearance})</div>
+            <div class="text-[10px] text-gray-300 mt-1 italic">Initializing Command Theater HUD...</div>
+          `;
+
+          // Redirect to Command Theater Dashboard after 1 second
+          setTimeout(() => {
+            window.location.href = "/";
+          }, 1100);
+
+        } else {
+          // Authentication Failed
+          btn.disabled = false;
+          btn.className = "w-full bg-gradient-to-r from-rose-700 to-pink-700 text-white font-orbitron font-bold text-xs py-3.5 rounded shadow-lg flex items-center justify-center space-x-2 glow-red cursor-pointer";
+          btnText.innerText = "AUTHORIZE BIOMETRIC CLEARANCE";
+          btnIcon.className = "fa-solid fa-unlock-keyhole mr-1";
+
+          statusBox.className = "p-3 rounded border border-hudred bg-rose-950/80 text-rose-300 text-xs font-digital block";
+          statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5 text-hudred"></i> <b>SECURITY REJECTION:</b> ${data.detail || 'Invalid operator credentials or unauthorized clearance level.'}`;
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.className = "w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-orbitron font-bold text-xs py-3.5 rounded shadow-lg flex items-center justify-center space-x-2 glow-cyan cursor-pointer";
+        btnText.innerText = "AUTHORIZE BIOMETRIC CLEARANCE";
+        btnIcon.className = "fa-solid fa-unlock-keyhole mr-1";
+
+        statusBox.className = "p-3 rounded border border-hudred bg-rose-950/80 text-rose-300 text-xs font-digital block";
+        statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1.5 text-hudred"></i> Network error connecting to AEGIS-SOC Gateway: ${err}`;
+      }
+    }
+  </script>
+</body>
+</html>

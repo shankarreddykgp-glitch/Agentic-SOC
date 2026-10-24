@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+langgraph
+chromadb
+google-genai
+python-dotenv
+python-dateutil
+requests
+reportlab
+fpdf2
